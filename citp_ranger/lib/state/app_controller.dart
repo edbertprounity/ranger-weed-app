@@ -36,7 +36,6 @@ class AppController extends ChangeNotifier {
   SyncService? _sync;
   final Uuid _uuid = const Uuid();
   StreamSubscription<List<ConnectivityResult>>? _connectivity;
-  bool _wasOffline = true;
 
   bool online = false;
 
@@ -168,21 +167,40 @@ class AppController extends ChangeNotifier {
     final connectivity = Connectivity();
     try {
       final current = await connectivity.checkConnectivity();
-      online = _hasLink(current);
-      _wasOffline = !online;
+      await _applyLink(_hasLink(current));
       _connectivity = connectivity.onConnectivityChanged.listen((results) {
-        final linked = _hasLink(results);
-        online = linked;
-        if (linked && _wasOffline) {
-          _wasOffline = false;
-          unawaited(syncNow());
-        } else if (!linked) {
-          _wasOffline = true;
-          notifyListeners();
-        }
+        unawaited(_applyLink(_hasLink(results)));
       });
     } catch (_) {
-      online = false;
+      await _applyLink(false);
+    }
+  }
+
+  /// A network adapter can report "none" on Windows while the internet still works.
+  /// The status follows a live check in that case.
+  Future<void> _applyLink(bool interfaceUp) async {
+    final linked = interfaceUp || await _canReachInternet();
+    final becameOnline = linked && !online;
+    online = linked;
+    notifyListeners();
+    if (becameOnline) unawaited(syncNow());
+  }
+
+  Future<bool> _canReachInternet() async {
+    if (kIsWeb) return false;
+    final client = HttpClient();
+    try {
+      client.connectionTimeout = const Duration(seconds: 3);
+      final request = await client
+          .getUrl(Uri.parse('https://www.gstatic.com/generate_204'))
+          .timeout(const Duration(seconds: 4));
+      final response = await request.close().timeout(const Duration(seconds: 4));
+      await response.drain<void>();
+      return response.statusCode == 204 || response.statusCode == 200;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
     }
   }
 
@@ -481,14 +499,14 @@ class AppController extends ChangeNotifier {
       await SupabaseGate.tryInit();
     }
     if (!sharingReady) {
-      online = false;
       if (manual) {
-        syncMessage = 'Saved on this phone. Pending records upload when the link returns.';
+        syncMessage = online
+            ? 'This phone is online. Records upload once the database link is set.'
+            : 'Saved on this phone. Pending records upload when the link returns.';
         notifyListeners();
       }
       return;
     }
-    online = true;
     syncing = true;
     if (manual) syncMessage = 'Uploading pending records...';
     notifyListeners();

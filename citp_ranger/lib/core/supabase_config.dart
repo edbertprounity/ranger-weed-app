@@ -1,18 +1,11 @@
-/// Shared demo database. Paste the project URL and anon key from Supabase,
-/// or pass them at launch:
-/// `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`
+/// Shared demo database. The URL and publishable key are supplied at build time:
+/// `flutter run --dart-define-from-file=dart_defines.json`
+/// or `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`.
+/// Copy `dart_defines.example.json` to `dart_defines.json` and fill it in locally.
+/// That file stays out of the repository.
 class SupabaseConfig {
-  static const pastedUrl = 'https://xzftqjhhedjmtodczxdf.supabase.co';
-  static const pastedAnonKey = 'sb_publishable_kJJarbjsuY70DX7XnKTutQ_eQvOaMk7';
-
-  static const url = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: pastedUrl,
-  );
-  static const anonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: pastedAnonKey,
-  );
+  static const url = String.fromEnvironment('SUPABASE_URL');
+  static const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
   static bool get enabled => url.isNotEmpty && anonKey.isNotEmpty;
 }

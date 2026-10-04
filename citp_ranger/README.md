@@ -20,11 +20,17 @@ Records are written to a SQLite database in the app documents folder as soon as 
 ## Share records for the demo
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run `supabase/schema.sql`, then `supabase/seed.sql`.
-3. In Project Settings → API, copy the project URL and the anon public key.
-4. Paste them into `lib/core/supabase_config.dart` (`pastedUrl` and `pastedAnonKey`).
-5. Stop the app and run it again. Use the sync icon. Another phone with the same keys can see the same sites and photos.
+2. In the SQL editor, run `supabase/schema.sql`, then `supabase/accounts.sql`, then `supabase/seed.sql`.
+3. In Project Settings → API, copy the project URL and the publishable key.
+4. Copy `dart_defines.example.json` to `dart_defines.json` in this folder and paste those two values there. `dart_defines.json` is gitignored.
+5. Stop the app and run:
 
-The free project pauses after a week unused. Delete it when the demo is over. The anon key is enough to read and write this demo data, so keep the project private to the team.
+```powershell
+flutter run -d windows --dart-define-from-file=dart_defines.json
+```
 
-Without those keys, the app still logs sites, photos, GPS or typed coordinates, sprays, and the 30-day re-check. Nothing is uploaded.
+GitHub Pages builds read the same values from the repository secrets `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+
+The free project pauses after a week unused. Delete it when the demo is over. The publishable key can read and write this demo data, so keep the project private to the team.
+
+Without those values, the app still logs sites, photos, GPS or typed coordinates, sprays, and the 30-day re-check. Nothing is uploaded. An admin can still add a ranger on this phone from **Add ranger**. Sharing that account with other phones needs the database connection, and the `create_account` function from `accounts.sql`.

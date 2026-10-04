@@ -8,6 +8,7 @@ import '../../widgets/sync_status_pill.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../public/public_report_screen.dart';
 import '../site/site_form_screen.dart';
+import '../admin/create_account_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -65,6 +66,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           ],
         ),
         actions: [
+          if (controller.canReview)
+            IconButton(
+              tooltip: 'Add ranger',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CreateAccountScreen()),
+                );
+              },
+              icon: const Icon(Icons.person_add_alt),
+            ),
           const SyncStatusPill(),
           const SizedBox(width: 4),
           IconButton(

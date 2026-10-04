@@ -44,6 +44,7 @@ class AppController extends ChangeNotifier {
   bool syncing = false;
   AppRole? role;
   String? rangerName;
+  String? signedInEmail;
   String? syncMessage;
   List<Site> sites = [];
   List<Treatment> treatments = [];
@@ -148,6 +149,7 @@ class AppController extends ChangeNotifier {
     await database.seedIfEmpty(buildDemoData(DateTime.now()));
     role = roleFromName(await database.getMeta('role'));
     rangerName = await database.getMeta('ranger_name');
+    signedInEmail = await database.getMeta('account_email');
     await reload();
     try {
       await _reminders.init().timeout(const Duration(seconds: 4));
@@ -213,8 +215,10 @@ class AppController extends ChangeNotifier {
   Future<void> signOut() async {
     role = null;
     rangerName = null;
+    signedInEmail = null;
     await _database?.deleteMeta('role');
     await _database?.deleteMeta('ranger_name');
+    await _database?.deleteMeta('account_email');
     notifyListeners();
   }
 
@@ -242,6 +246,8 @@ class AppController extends ChangeNotifier {
                 displayName: name,
               ),
             );
+            await _database?.setMeta('account_email', normalised);
+            signedInEmail = normalised;
             await _enter(nextRole, name);
             return null;
           }
@@ -253,6 +259,8 @@ class AppController extends ChangeNotifier {
     }
     final cached = await _database?.accountByEmail(normalised);
     if (cached != null && cached.passwordHash == localPasswordHash(normalised, password)) {
+      await _database?.setMeta('account_email', normalised);
+      signedInEmail = normalised;
       await _enter(cached.role, cached.displayName);
       return null;
     }
@@ -268,6 +276,86 @@ class AppController extends ChangeNotifier {
     await _database?.setMeta('ranger_name', name);
     notifyListeners();
     unawaited(syncNow());
+  }
+
+  /// Stores a ranger or admin on this phone, then asks the shared database to keep the same account.
+  /// The admin password is sent only for that check and is not saved.
+  Future<String?> createAccount({
+    required String adminEmail,
+    required String adminPassword,
+    required String email,
+    required String password,
+    required String displayName,
+    AppRole accountRole = AppRole.ranger,
+  }) async {
+    if (role != AppRole.admin) return 'Only an admin can add an account.';
+    if (accountRole == AppRole.public) return 'Public visitors do not get an account.';
+    final normalised = email.trim().toLowerCase();
+    final name = displayName.trim();
+    final admin = adminEmail.trim().toLowerCase();
+    if (name.isEmpty) return 'Enter the person’s name.';
+    if (!normalised.contains('@') || !normalised.split('@').last.contains('.')) {
+      return 'Enter a valid email.';
+    }
+    if (password.length < 8) return 'Use a password of at least 8 characters.';
+    if (admin.isEmpty || adminPassword.isEmpty) {
+      return 'Enter your admin email and password to confirm.';
+    }
+
+    final storedAdmin = await _database?.accountByEmail(admin);
+    final adminConfirmedLocally = storedAdmin != null &&
+        storedAdmin.role == AppRole.admin &&
+        storedAdmin.passwordHash == localPasswordHash(admin, adminPassword);
+    if (storedAdmin != null && !adminConfirmedLocally) {
+      return 'Your admin password was not accepted.';
+    }
+    if (!adminConfirmedLocally && (!sharingReady || Platform.environment['FLUTTER_TEST'] == 'true')) {
+      return 'Your admin password was not accepted.';
+    }
+
+    var shared = false;
+    if (sharingReady && Platform.environment['FLUTTER_TEST'] != 'true') {
+      try {
+        await Supabase.instance.client.rpc(
+          'create_account',
+          params: {
+            'p_admin_email': admin,
+            'p_admin_password': adminPassword,
+            'p_email': normalised,
+            'p_password': password,
+            'p_display_name': name,
+            'p_role': accountRole.name,
+          },
+        );
+        shared = true;
+      } on PostgrestException catch (error) {
+        final detail = error.message.toLowerCase();
+        if (detail.contains('not authorised')) {
+          return 'Your admin password was not accepted.';
+        }
+        if (!adminConfirmedLocally) {
+          return 'The shared database did not confirm this account.';
+        }
+      } catch (_) {
+        if (!adminConfirmedLocally) {
+          return 'The shared database did not confirm this account.';
+        }
+      }
+    }
+
+    await _database?.rememberAccount(
+      LocalAccount(
+        email: normalised,
+        passwordHash: localPasswordHash(normalised, password),
+        role: accountRole,
+        displayName: name,
+      ),
+    );
+    if (shared) return null;
+    if (!sharingReady) {
+      return 'Saved on this phone. Connect, then add the account again to share it.';
+    }
+    return 'Saved on this phone. The shared database did not store it yet.';
   }
 
   Future<void> continueAsPublic(String name) async {

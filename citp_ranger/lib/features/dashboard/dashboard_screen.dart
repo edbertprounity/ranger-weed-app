@@ -14,6 +14,7 @@ import '../../widgets/site_map.dart';
 import '../../widgets/status_badge.dart';
 import '../site/site_detail_screen.dart';
 import '../site/site_form_screen.dart';
+import '../admin/create_account_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key, this.phoneTab = 0});
@@ -83,6 +84,18 @@ class _SiteList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
       children: [
+        if (controller.canReview) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const CreateAccountScreen()),
+              );
+            },
+            icon: const Icon(Icons.person_add_alt),
+            label: const Text('Add ranger'),
+          ),
+        ],
         if (controller.canReview && controller.pendingReviews.isNotEmpty) ...[
           const SizedBox(height: 20),
           const Text('Waiting for approval', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),

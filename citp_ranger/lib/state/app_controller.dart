@@ -87,36 +87,6 @@ class AppController extends ChangeNotifier {
     return sitesWaiting.length + treatmentsWaiting.length;
   }
 
-  /// Public visitors only hear about the reports they just sent.
-  int get recordsWaitingToSync {
-    if (role != AppRole.public) return waitingToUpload;
-    final name = rangerName;
-    return sites
-        .where(
-          (site) =>
-              site.source == 'public' &&
-              site.rangerName == name &&
-              site.status != SiteStatus.draft &&
-              site.syncedAt == null,
-        )
-        .length;
-  }
-
-  List<Site> get ownPublicReports {
-    final name = rangerName;
-    final rows =
-        sites
-            .where(
-              (site) =>
-                  site.source == 'public' &&
-                  site.rangerName == name &&
-                  site.status != SiteStatus.draft,
-            )
-            .toList()
-          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return rows;
-  }
-
   Site? siteById(String id) {
     for (final site in sites) {
       if (site.id == id) return site;
@@ -148,7 +118,12 @@ class AppController extends ChangeNotifier {
       _sync ??= SyncService(database, _photos);
       await database.seedIfEmpty(buildDemoData(DateTime.now()));
       role = roleFromName(await database.getMeta('role'));
-      rangerName = await database.getMeta('ranger_name');
+      if (role == AppRole.public) {
+        role = null;
+        await database.deleteMeta('role');
+        await database.deleteMeta('ranger_name');
+      }
+      rangerName = role == null ? null : await database.getMeta('ranger_name');
       signedInEmail = await database.getMeta('account_email');
       await reload();
       try {
@@ -388,14 +363,18 @@ class AppController extends ChangeNotifier {
     return 'Saved on this phone. The shared database did not store it yet.';
   }
 
-  Future<void> continueAsPublic(String name) async {
-    final trimmed = name.trim().isEmpty ? 'Public' : name.trim();
+  Future<void> continueAsPublic() async {
     role = AppRole.public;
-    rangerName = trimmed;
-    await _database?.setMeta('role', AppRole.public.name);
-    await _database?.setMeta('ranger_name', trimmed);
+    rangerName = 'Public';
+    signedInEmail = null;
+    await _database?.deleteMeta('role');
+    await _database?.deleteMeta('ranger_name');
+    await _database?.deleteMeta('account_email');
+    final leftover = sites.where((site) => site.source == 'public' && site.status == SiteStatus.draft).toList();
+    for (final site in leftover) {
+      await discardDraft(site.id);
+    }
     notifyListeners();
-    unawaited(syncNow());
   }
 
   Future<Site> createDraft() async {

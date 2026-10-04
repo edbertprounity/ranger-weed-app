@@ -72,7 +72,9 @@ class _SiteFormScreenState extends State<SiteFormScreen> {
         if (!didPop) return;
         await _writes;
         final saved = controller.siteById(site.id);
-        if (saved != null && saved.status == SiteStatus.draft && _isBlank(saved)) {
+        if (saved != null &&
+            saved.status == SiteStatus.draft &&
+            (controller.role == AppRole.public || _isBlank(saved))) {
           await controller.discardDraft(saved.id);
         }
       },
@@ -83,7 +85,11 @@ class _SiteFormScreenState extends State<SiteFormScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Draft saved on this phone as you go.'),
+          Text(
+            controller.role == AppRole.public
+                ? 'Send the report. It is reviewed before it is listed.'
+                : 'Draft saved on this phone as you go.',
+          ),
           const SizedBox(height: 16),
           Text('Species', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),

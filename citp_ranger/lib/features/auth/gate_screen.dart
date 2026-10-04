@@ -99,6 +99,6 @@ class _GateScreenState extends State<GateScreen> {
   }
 
   Future<void> _public() async {
-    await context.read<AppController>().continueAsPublic('');
+    await context.read<AppController>().continueAsPublic();
   }
 }

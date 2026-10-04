@@ -59,10 +59,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               isPublic ? 'Report a weed' : 'Lama Lama',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            Text(
-              isPublic ? 'Public' : roleLabel(controller.role!),
-              style: const TextStyle(fontSize: 12, color: muted, fontWeight: FontWeight.w400),
-            ),
+            if (!isPublic)
+              Text(
+                roleLabel(controller.role!),
+                style: const TextStyle(fontSize: 12, color: muted, fontWeight: FontWeight.w400),
+              ),
           ],
         ),
         actions: [
@@ -79,7 +80,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           const SyncStatusPill(),
           const SizedBox(width: 4),
           IconButton(
-            tooltip: 'Sign out',
+            tooltip: isPublic ? 'Close' : 'Sign out',
             onPressed: controller.signOut,
             icon: const Icon(Icons.logout),
           ),

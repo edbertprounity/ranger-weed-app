@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -14,8 +15,7 @@ class AppDatabase {
   final Database db;
 
   static Future<AppDatabase> open({String? path}) async {
-    final resolved = path ??
-        p.join((await getApplicationDocumentsDirectory()).path, 'citp_ranger.db');
+    final resolved = path ?? await _databasePath();
     final db = await openDatabase(
       resolved,
       version: 4,
@@ -75,6 +75,12 @@ class AppDatabase {
   }
 
   /// Adds columns a device may be missing after a partial or repeated upgrade.
+  static Future<String> _databasePath() async {
+    if (kIsWeb) return 'citp_ranger.db';
+    final root = await getApplicationDocumentsDirectory();
+    return p.join(root.path, 'citp_ranger.db');
+  }
+
   static Future<void> _pragma(Database db, String sql) async {
     try {
       if (sql.startsWith('PRAGMA journal_mode')) {

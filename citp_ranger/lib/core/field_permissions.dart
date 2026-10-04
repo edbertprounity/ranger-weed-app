@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class FieldPermissions {
@@ -19,7 +20,10 @@ class FieldPermissions {
 
   static Future<bool> location() => _ask(Permission.locationWhenInUse);
 
-  static bool get _needsRuntime => Platform.isAndroid || Platform.isIOS;
+  static bool get _needsRuntime {
+    if (kIsWeb) return false;
+    return Platform.isAndroid || Platform.isIOS;
+  }
 
   static Future<bool> _ask(Permission permission) async {
     if (!_needsRuntime) return true;

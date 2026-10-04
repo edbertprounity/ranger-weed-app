@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../core/device_location.dart';
 import '../core/format.dart';
 import '../core/priority.dart';
 import '../core/species.dart';
@@ -32,20 +34,46 @@ class SiteMap extends StatefulWidget {
 }
 
 class _SiteMapState extends State<SiteMap> {
+  final MapController _mapController = MapController();
   Directory? _tiles;
   SiteView? _hovered;
+  LatLng? _device;
+  bool _locating = false;
 
   @override
   void initState() {
     super.initState();
-    _openTileFolder();
+    if (!kIsWeb) _openTileFolder();
   }
 
   Future<void> _openTileFolder() async {
-    final root = await getApplicationDocumentsDirectory();
-    final folder = Directory(p.join(root.path, 'citp_ranger_tiles'));
-    if (!await folder.exists()) await folder.create(recursive: true);
-    if (mounted) setState(() => _tiles = folder);
+    try {
+      final root = await getApplicationDocumentsDirectory();
+      final folder = Directory(p.join(root.path, 'citp_ranger_tiles'));
+      if (!await folder.exists()) await folder.create(recursive: true);
+      if (mounted) setState(() => _tiles = folder);
+    } catch (_) {
+      // The map can still open from the network.
+    }
+  }
+
+  Future<void> _addMyLocation() async {
+    setState(() => _locating = true);
+    try {
+      final fix = await readDeviceLocation();
+      if (!mounted) return;
+      final point = LatLng(fix.latitude, fix.longitude);
+      setState(() => _device = point);
+      _mapController.move(point, 15);
+      widget.onPick?.call(point);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This device could not read a GPS fix. You can still tap the map.')),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   static const _country = LatLng(-14.36, 143.68);
@@ -78,6 +106,7 @@ class _SiteMapState extends State<SiteMap> {
         children: [
           Positioned.fill(
             child: FlutterMap(
+              mapController: _mapController,
               key: widget.onPick == null
                   ? ValueKey(points.map((point) => '${point.latitude},${point.longitude}').join('|'))
                   : ValueKey(points.isEmpty ? 'empty' : 'placed'),
@@ -104,7 +133,13 @@ class _SiteMapState extends State<SiteMap> {
                 ),
               ),
               children: [
-                if (_tiles == null)
+                if (kIsWeb)
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.citp.prototype',
+                    tileProvider: NetworkTileProvider(),
+                  )
+                else if (_tiles == null)
                   const ColoredBox(color: Color(0xFFD5D0C4))
                 else
                   TileLayer(
@@ -146,6 +181,23 @@ class _SiteMapState extends State<SiteMap> {
                       ),
                   ],
                 ),
+                if (_device != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _device!,
+                        width: 22,
+                        height: 22,
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xFF3D7EFF),
+                            shape: BoxShape.circle,
+                            border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 3)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 const SimpleAttributionWidget(
                   source: Text('OpenStreetMap'),
                   backgroundColor: Color(0xCC121212),
@@ -159,6 +211,26 @@ class _SiteMapState extends State<SiteMap> {
               top: 12,
               child: _PinDetails(view: _hovered!),
             ),
+          Positioned(
+            right: 12,
+            bottom: 28,
+            child: Material(
+              color: panel,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: IconButton(
+                tooltip: 'Add my location',
+                onPressed: _locating ? null : _addMyLocation,
+                icon: _locating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -178,9 +250,11 @@ class _SiteMapState extends State<SiteMap> {
         ),
         const SizedBox(height: 4),
         Text(
-          plotted.isEmpty
+          kIsWeb
+              ? 'Drag to move. Add my location uses this device’s GPS and does not need internet. The map picture does.'
+              : plotted.isEmpty
               ? 'No located sites yet. Drag the map. Tiles opened here stay on this phone.'
-              : 'Drag to move. Hover a pin for the site. Tiles already opened stay on this phone.',
+              : 'Drag to move. Hover a pin for the site. Add my location uses GPS and works without internet.',
           style: const TextStyle(color: muted, fontSize: 12),
         ),
       ],

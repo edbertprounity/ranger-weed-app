@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/device_location.dart';
 import '../../core/field_permissions.dart';
 import '../../core/role.dart';
 import '../../core/species.dart';
@@ -133,7 +133,12 @@ class _SiteFormScreenState extends State<SiteFormScreen> {
             icon: _locating
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.my_location),
-            label: const Text('Use this phone’s location'),
+            label: const Text('Add my location'),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Uses this device’s GPS. A phone can do this with no internet.',
+            style: TextStyle(color: muted, fontSize: 13),
           ),
           if (_gpsLabel != null) ...[
             const SizedBox(height: 10),
@@ -293,32 +298,19 @@ class _SiteFormScreenState extends State<SiteFormScreen> {
   Future<void> _useLocation() async {
     setState(() => _locating = true);
     try {
-      final allowed = await FieldPermissions.location();
-      if (!allowed) throw StateError('denied');
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) throw StateError('off');
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        throw StateError('denied');
-      }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
+      final fix = await readDeviceLocation();
       if (!mounted || _site == null) return;
-      _lat.text = position.latitude.toStringAsFixed(5);
-      _lng.text = position.longitude.toStringAsFixed(5);
+      _lat.text = fix.latitude.toStringAsFixed(5);
+      _lng.text = fix.longitude.toStringAsFixed(5);
       setState(() {
-        _accuracy = position.accuracy;
+        _accuracy = fix.accuracy;
         _placedByHand = false;
       });
-      await _update(_site!.copyWith(latitude: position.latitude, longitude: position.longitude));
+      await _update(_site!.copyWith(latitude: fix.latitude, longitude: fix.longitude));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location is unavailable. Type the coordinates or tap the map.')),
+        const SnackBar(content: Text('This device could not read a GPS fix. Type the coordinates or tap the map.')),
       );
     } finally {
       if (mounted) setState(() => _locating = false);

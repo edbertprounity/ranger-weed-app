@@ -44,8 +44,9 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # We use the explicit path fallback to handle subfolder asset mapping correctly
           flutter build web --release \
-            --base-href "${{ steps.pages.outputs.base_path }}/" \
+            --base-href "/ranger-weed-app/" \
             --dart-define=SUPABASE_URL="${SUPABASE_URL}" \
             --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
           cp build/web/index.html build/web/404.html

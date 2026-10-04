@@ -142,28 +142,40 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> start() async {
-    final database = _database ?? await AppDatabase.open();
-    _database = database;
-    _sync ??= SyncService(database, _photos);
-    await database.seedIfEmpty(buildDemoData(DateTime.now()));
-    role = roleFromName(await database.getMeta('role'));
-    rangerName = await database.getMeta('ranger_name');
-    signedInEmail = await database.getMeta('account_email');
-    await reload();
     try {
-      await _reminders.init().timeout(const Duration(seconds: 4));
-      await _reminders.reschedule(followUps).timeout(const Duration(seconds: 4));
-    } catch (_) {
-      // The follow-up list is already stored. A reminder popup is optional.
+      final database = _database ?? await AppDatabase.open();
+      _database = database;
+      _sync ??= SyncService(database, _photos);
+      await database.seedIfEmpty(buildDemoData(DateTime.now()));
+      role = roleFromName(await database.getMeta('role'));
+      rangerName = await database.getMeta('ranger_name');
+      signedInEmail = await database.getMeta('account_email');
+      await reload();
+      try {
+        await _reminders.init().timeout(const Duration(seconds: 4));
+        await _reminders.reschedule(followUps).timeout(const Duration(seconds: 4));
+      } catch (_) {
+        // The follow-up list is already stored. A reminder popup is optional.
+      }
+      ready = true;
+      notifyListeners();
+      await _watchConnection();
+      unawaited(syncNow());
+    } catch (error, stack) {
+      debugPrint('Database start failed: $error\n$stack');
+      ready = true;
+      syncMessage = 'The local database could not be opened.';
+      notifyListeners();
     }
-    ready = true;
-    notifyListeners();
-    await _watchConnection();
-    unawaited(syncNow());
+  }
+
+  bool get _inFlutterTest {
+    if (kIsWeb) return false;
+    return Platform.environment['FLUTTER_TEST'] == 'true';
   }
 
   Future<void> _watchConnection() async {
-    if (Platform.environment['FLUTTER_TEST'] == 'true') return;
+    if (_inFlutterTest) return;
     final connectivity = Connectivity();
     try {
       final current = await connectivity.checkConnectivity();
@@ -327,12 +339,12 @@ class AppController extends ChangeNotifier {
     if (storedAdmin != null && !adminConfirmedLocally) {
       return 'Your admin password was not accepted.';
     }
-    if (!adminConfirmedLocally && (!sharingReady || Platform.environment['FLUTTER_TEST'] == 'true')) {
+    if (!adminConfirmedLocally && (!sharingReady || _inFlutterTest)) {
       return 'Your admin password was not accepted.';
     }
 
     var shared = false;
-    if (sharingReady && Platform.environment['FLUTTER_TEST'] != 'true') {
+    if (sharingReady && !_inFlutterTest) {
       try {
         await Supabase.instance.client.rpc(
           'create_account',
@@ -493,7 +505,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> syncNow({bool manual = false}) async {
-    if (Platform.environment['FLUTTER_TEST'] == 'true') return;
+    if (_inFlutterTest) return;
     if (syncing) return;
     if (!sharingReady) {
       await SupabaseGate.tryInit();

@@ -55,6 +55,10 @@ dependencies:
   permission_handler: ^13.0.2
   sqflite_common_ffi_web: ^1.0.2
 
+dependency_overrides:
+  # 14.x uses a Kotlin block this project's Android Gradle plugin cannot compile.
+  permission_handler_android: 13.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

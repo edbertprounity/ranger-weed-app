@@ -20,9 +20,9 @@ class AppDatabase {
       resolved,
       version: 4,
       onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON');
-        await db.rawQuery('PRAGMA journal_mode = WAL');
-        await db.execute('PRAGMA synchronous = FULL');
+        await _pragma(db, 'PRAGMA foreign_keys = ON');
+        await _pragma(db, 'PRAGMA journal_mode = WAL');
+        await _pragma(db, 'PRAGMA synchronous = FULL');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         await _repair(db);
@@ -75,6 +75,18 @@ class AppDatabase {
   }
 
   /// Adds columns a device may be missing after a partial or repeated upgrade.
+  static Future<void> _pragma(Database db, String sql) async {
+    try {
+      if (sql.startsWith('PRAGMA journal_mode')) {
+        await db.rawQuery(sql);
+      } else {
+        await db.execute(sql);
+      }
+    } catch (_) {
+      // Web SQLite does not support every desktop pragma. The file still opens.
+    }
+  }
+
   static Future<void> _repair(Database db) async {
     await _addColumnIfMissing(
       db,

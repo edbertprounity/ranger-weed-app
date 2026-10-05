@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../data/models/site.dart';
 import '../../data/models/treatment.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/site_map.dart';
 import '../../widgets/site_photo.dart';
 
@@ -80,7 +81,7 @@ class _SiteFormScreenState extends State<SiteFormScreen> {
       },
       child: Scaffold(
       appBar: AppBar(
-        title: Text(controller.role == AppRole.public ? 'Report a weed' : 'Log infestation'),
+        title: BrandTitle(controller.role == AppRole.public ? 'Report a weed' : 'Log infestation'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

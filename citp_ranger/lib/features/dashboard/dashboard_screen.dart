@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../data/models/treatment.dart';
 import '../../data/models/site.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/site_card.dart';
 import '../../widgets/site_map.dart';
 import '../../widgets/status_badge.dart';
@@ -84,6 +85,22 @@ class _SiteList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
       children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 12, bottom: 8),
+          child: Row(
+            children: [
+              AppLogo(size: 64),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Lama Lama', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                  Text('Rangers', style: TextStyle(color: muted, fontSize: 13)),
+                ],
+              ),
+            ],
+          ),
+        ),
         if (controller.canReview) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(

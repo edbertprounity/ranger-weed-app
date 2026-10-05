@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/role.dart';
 import '../../core/theme.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -45,7 +46,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   Widget build(BuildContext context) {
     final knownAdmin = context.watch<AppController>().signedInEmail;
     return Scaffold(
-      appBar: AppBar(title: const Text('Add ranger')),
+      appBar: AppBar(title: const BrandTitle('Add ranger')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -15,3 +15,22 @@ class AppLogo extends StatelessWidget {
     );
   }
 }
+
+class BrandTitle extends StatelessWidget {
+  const BrandTitle(this.label, {super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const AppLogo(size: 28),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+}

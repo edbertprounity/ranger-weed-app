@@ -12,6 +12,7 @@ import '../../data/local/photo_store.dart';
 import '../../data/models/site.dart';
 import '../../data/models/treatment.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/site_map.dart';
 import '../../widgets/site_photo.dart';
 import '../../widgets/status_badge.dart';
@@ -46,7 +47,7 @@ class SiteDetailScreen extends StatelessWidget {
       },
     };
     return Scaffold(
-      appBar: AppBar(title: Text(species?.name ?? 'Weed site')),
+      appBar: AppBar(title: BrandTitle(species?.name ?? 'Weed site')),
       bottomNavigationBar: _ActionPanel(site: site),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

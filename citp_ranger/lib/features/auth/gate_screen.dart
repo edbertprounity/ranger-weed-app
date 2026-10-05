@@ -32,9 +32,19 @@ class _GateScreenState extends State<GateScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           children: [
-            const AppLogo(size: 96),
+            const Center(child: AppLogo(size: 120)),
             const SizedBox(height: 16),
-            const Text('Lama Lama', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
+            const Text(
+              'Lama Lama',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Rangers',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: muted, fontSize: 14, letterSpacing: 0.6),
+            ),
             const SizedBox(height: 8),
             const Text(
               'Sign in once. This phone keeps that sign-in, so a lost connection does not lock you out.',

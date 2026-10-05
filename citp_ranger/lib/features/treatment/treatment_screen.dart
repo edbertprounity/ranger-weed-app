@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../data/local/photo_store.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 
 class TreatmentScreen extends StatefulWidget {
   const TreatmentScreen({super.key, required this.siteId});
@@ -44,7 +45,7 @@ class _TreatmentScreenState extends State<TreatmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Update status')),
+      appBar: AppBar(title: const BrandTitle('Update status')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

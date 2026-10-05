@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/role.dart';
 import '../../core/theme.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 import '../../widgets/sync_status_pill.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../public/public_report_screen.dart';
@@ -52,18 +53,24 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final wide = MediaQuery.sizeOf(context).width >= DashboardScreen.wideWidth;
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              isPublic ? 'Report a weed' : 'Lama Lama',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            const AppLogo(size: 32),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPublic ? 'Report a weed' : 'Lama Lama',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                if (!isPublic)
+                  Text(
+                    roleLabel(controller.role!),
+                    style: const TextStyle(fontSize: 12, color: muted, fontWeight: FontWeight.w400),
+                  ),
+              ],
             ),
-            if (!isPublic)
-              Text(
-                roleLabel(controller.role!),
-                style: const TextStyle(fontSize: 12, color: muted, fontWeight: FontWeight.w400),
-              ),
           ],
         ),
         actions: [

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../state/app_controller.dart';
+import '../../widgets/app_logo.dart';
 
 class GateScreen extends StatefulWidget {
   const GateScreen({super.key});
@@ -31,6 +32,8 @@ class _GateScreenState extends State<GateScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           children: [
+            const AppLogo(size: 96),
+            const SizedBox(height: 16),
             const Text('Lama Lama', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             const Text(

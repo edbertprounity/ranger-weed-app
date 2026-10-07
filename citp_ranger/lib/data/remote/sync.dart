@@ -74,27 +74,45 @@ class SyncService {
   Future<void> _pullSites(SupabaseClient client) async {
     final rows = await client.from('sites').select();
     final local = {for (final site in await db.allSites()) site.id: site};
+    final remoteIds = <String>{};
     for (final row in rows) {
+      final existing = local[row['id'].toString()];
       final incoming = Site.fromRemote(
         Map<String, dynamic>.from(row as Map),
-        photoPath: local[row['id'].toString()]?.photoPath,
+        photoPath: existing?.photoPath,
       );
+      remoteIds.add(incoming.id);
       if (incoming.status == SiteStatus.draft) continue;
-      final existing = local[incoming.id];
-      if (existing != null &&
-          existing.syncedAt == null &&
-          existing.status != SiteStatus.draft) {
-        continue;
-      }
+      if (_offlineEdit(existing)) continue;
       await db.upsertSite(incoming);
-      await _downloadPhoto(client, incoming);
+      await _downloadPhoto(
+        client,
+        incoming,
+        replace: existing != null && existing.photoUrl != incoming.photoUrl,
+      );
+    }
+    for (final site in local.values) {
+      if (remoteIds.contains(site.id)) continue;
+      if (site.status == SiteStatus.draft || site.syncedAt == null) continue;
+      try {
+        await photos.deleteIfPresent(site.photoPath);
+      } catch (_) {}
+      await db.deleteSite(site.id);
     }
   }
 
-  Future<void> _downloadPhoto(SupabaseClient client, Site site) async {
+  Future<void> _downloadPhoto(
+    SupabaseClient client,
+    Site site, {
+    bool replace = false,
+  }) async {
     if (site.photoUrl == null || site.photoUrl!.isEmpty) return;
     final path = site.photoPath;
-    if (path != null && File(resolvePhotoPath(path)).existsSync()) return;
+    if (!replace && path != null) {
+      try {
+        if (File(resolvePhotoPath(path)).existsSync()) return;
+      } catch (_) {}
+    }
     try {
       final bytes = await client.storage.from('site-photos').download('${site.id}.jpg');
       final saved = await photos.writeBytes(site.id, bytes);
@@ -110,15 +128,29 @@ class SyncService {
       for (final treatment in await db.allTreatments()) treatment.id: treatment,
     };
     final siteIds = {for (final site in await db.allSites()) site.id};
+    final remoteIds = <String>{};
     for (final row in rows) {
       final existing = local[row['id'].toString()];
       final incoming = Treatment.fromRemote(
         Map<String, dynamic>.from(row as Map),
         photoPath: existing?.photoPath,
       );
+      remoteIds.add(incoming.id);
       if (!siteIds.contains(incoming.siteId)) continue;
       if (existing != null && existing.syncedAt == null) continue;
       await db.upsertTreatment(incoming);
     }
+    for (final treatment in local.values) {
+      if (remoteIds.contains(treatment.id)) continue;
+      if (treatment.syncedAt == null) continue;
+      try {
+        await photos.deleteIfPresent(treatment.photoPath);
+      } catch (_) {}
+      await db.deleteTreatment(treatment.id);
+    }
   }
+}
+
+bool _offlineEdit(Site? site) {
+  return site != null && site.syncedAt == null && site.status != SiteStatus.draft;
 }

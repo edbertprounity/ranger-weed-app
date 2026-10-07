@@ -507,8 +507,8 @@ class AppController extends ChangeNotifier {
       await _reminders.reschedule(followUps);
       if (manual) {
         syncMessage = failed == 0
-            ? 'Camp list updated. Other phones can see these records.'
-            : 'Some records are still pending sync. They stay on this phone.';
+            ? 'This phone now matches the shared database.'
+            : 'Some offline records are still waiting to upload. They stay on this phone.';
       }
     } catch (_) {
       if (manual) {

@@ -178,18 +178,21 @@ class AppDatabase {
   }
 
   Future<void> seedIfEmpty(DemoBundle demo) async {
+    if (await getMeta('demo_seeded') == '1') return;
     final count =
         Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM sites')) ??
         0;
-    if (count > 0) return;
-    await db.transaction((txn) async {
-      for (final site in demo.sites) {
-        await txn.insert('sites', site.toMap());
-      }
-      for (final treatment in demo.treatments) {
-        await txn.insert('treatments', treatment.toMap());
-      }
-    });
+    if (count == 0) {
+      await db.transaction((txn) async {
+        for (final site in demo.sites) {
+          await txn.insert('sites', site.toMap());
+        }
+        for (final treatment in demo.treatments) {
+          await txn.insert('treatments', treatment.toMap());
+        }
+      });
+    }
+    await setMeta('demo_seeded', '1');
   }
 
   Future<String?> getMeta(String key) async {
@@ -228,7 +231,12 @@ class AppDatabase {
   }
 
   Future<void> deleteSite(String id) async {
+    await db.delete('treatments', where: 'site_id = ?', whereArgs: [id]);
     await db.delete('sites', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteTreatment(String id) async {
+    await db.delete('treatments', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> setPhotoPath(String id, String path) async {
